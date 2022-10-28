@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export const create = <TState extends Record<string, unknown>>(
   stateCreator: (
@@ -7,6 +7,8 @@ export const create = <TState extends Record<string, unknown>>(
 ) => {
   let globalState: TState;
 
+  const listeners: Set<(state: TState) => void> = new Set();
+
   const set = (
     reducer: (prevState: TState) => Partial<TState>
   ): Partial<TState> => {
@@ -14,17 +16,31 @@ export const create = <TState extends Record<string, unknown>>(
 
     globalState = { ...globalState, ...newPartialState };
 
+    listeners.forEach((listener) => listener(globalState));
+
     return globalState;
   };
 
   globalState = stateCreator(set);
 
-  const useStore = (
-    selector: (state: TState | undefined) => keyof TState | undefined
+  const subscribe = (listener: any) => {
+    listeners.add(listener);
+
+    return () => {
+      listeners.delete(listener);
+    };
+  };
+
+  const useStore = <TSelectedState extends TState[keyof TState]>(
+    selector: (state: TState) => TSelectedState
   ) => {
     const [state, setState] = useState();
 
-    return selector(state);
+    useEffect(() => {
+      subscribe(setState);
+    }, []);
+
+    return selector(state || globalState);
   };
 
   return useStore;
