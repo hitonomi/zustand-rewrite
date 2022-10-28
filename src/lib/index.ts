@@ -37,7 +37,9 @@ export const create = <TState extends Record<string, unknown>>(
     const [state, setState] = useState();
 
     useEffect(() => {
-      subscribe(setState);
+      const unsubscribe = subscribe(setState);
+
+      return () => unsubscribe();
     }, []);
 
     return selector(state || globalState);
